@@ -107,6 +107,14 @@ function toggleRehab(wi, i) {
   saveState(); render();
 }
 
+// Gels to carry, assuming ~9 min/mi: first at 30 min, then every 30 min
+function fuelFor(s) {
+  if (!s.mi || s.mi < 7) return "";
+  if (s.mi < 11) return "Fuel: optional 1 gel";
+  const gels = Math.floor((s.mi * 9 - 30) / 30) + 1;
+  return "Fuel: " + gels + " gels + water & electrolytes";
+}
+
 // ---- Render ----
 const CHECK = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>';
 
@@ -205,6 +213,7 @@ function dayRow(s, today) {
   let what = '<div class="title">' + (s.mi ? '<span class="mi">' + miStr(s.mi) + "</span>" : "") + esc(s.title) +
     (s.optional ? '<span class="opt">optional</span>' : "") + "</div>";
   if (s.desc) what += '<div class="desc">' + esc(s.desc) + "</div>";
+  if (fuelFor(s)) what += '<span class="fuel-tag">' + esc(fuelFor(s)) + "</span>";
   if (done && s.mi) {
     const a = state[s.key].actual;
     what += '<label class="actual" for="a-' + s.key + '">Actual miles <input id="a-' + s.key + '" type="number" inputmode="decimal" step="0.01" min="0" value="' + (typeof a === "number" ? a : "") + '" data-actual="' + s.key + '"></label>';
@@ -225,7 +234,7 @@ function renderToday(today) {
     todays.forEach(s => {
       const done = isDone(s);
       h += '<div class="today-item"><div class="t"><div class="title">' + (s.mi ? miStr(s.mi) + " mi · " : "") + esc(s.title) + "</div>" +
-        (s.desc ? '<div class="desc">' + esc(s.desc) + "</div>" : "") + "</div>" +
+        (s.desc ? '<div class="desc">' + esc(s.desc) + "</div>" : "") + (fuelFor(s) ? '<span class="fuel-tag">' + esc(fuelFor(s)) + "</span>" : "") + "</div>" +
         '<button class="btn' + (done ? " done" : "") + '" data-toggle="' + s.key + '">' + (done ? "Done ✓" : "Mark done") + "</button></div>";
     });
   } else h = "<h2>Today · Rest day</h2>";
