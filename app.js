@@ -294,6 +294,10 @@ document.addEventListener("toggle", e => {
 // Refresh "today" when the app comes back to the foreground on a new day
 document.addEventListener("visibilitychange", () => { if (!document.hidden && PLAN) render(); });
 
+// No pinch or double-tap zoom (iOS ignores user-scalable=no on its own)
+["gesturestart", "gesturechange"].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
+document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+
 // ---- Boot ----
 (async function boot() {
   state = loadState();
