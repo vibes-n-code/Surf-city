@@ -34,8 +34,8 @@ function buildPlan(plan) {
         const r = w[day];
         const type = day === "mon" || day === "wed" ? "run" : day === "sat" ? "long" : day === "sun" && wi === last ? "race" : "run";
         s = { type, mi: r[0], title: r[1], desc: r[2] || "", optional: day === "fri" && !w.friRequired };
-      } else if (day === "mon") s = { type: "class", title: wi === last ? "Workout class (go light)" : "Workout class", mi: 0 };
-      else if (day === "wed") s = wi === last ? { type: "rest", title: "Rest", desc: "Skip class this week", mi: 0 } : { type: "class", title: "Workout class", mi: 0 };
+      } else if (day === "mon") s = { type: "class", title: "Good day for a class", desc: wi === last ? "Keep it light, upper body and core" : "", mi: 0 };
+      else if (day === "wed") s = wi === last ? { type: "rest", title: "Rest", desc: "Skip classes this week", mi: 0 } : { type: "class", title: "Good day for a class", desc: wi >= 9 ? "Go easy on legs during peak and taper" : "", mi: 0 };
       else if (day === "sun") s = { type: "rest", title: "Rest", desc: wi === 0 ? "" : "Or run the long run today if Saturday doesn't work", mi: 0 };
       else s = { type: "rest", title: day === "fri" && wi === last ? "Travel / rest" : "Rest", mi: 0 };
       Object.assign(s, { key, date, day: di, week: wi });
@@ -209,7 +209,7 @@ function render() {
 function dayRow(s, today) {
   const isToday = sameDay(s.date, today);
   const done = isDone(s);
-  const cls = "day" + (isToday ? " is-today" : "") + (done ? " done" : "") + (s.type === "rest" ? " rest" : "");
+  const cls = "day" + (isToday ? " is-today" : "") + (done ? " done" : "") + (s.type === "rest" ? " rest" : "") + (s.type === "class" ? " class" : "");
   let what = '<div class="title">' + (s.mi ? '<span class="mi">' + miStr(s.mi) + "</span>" : "") + esc(s.title) +
     (s.optional ? '<span class="opt">optional</span>' : "") + "</div>";
   if (s.desc) what += '<div class="desc">' + esc(s.desc) + "</div>";
@@ -218,24 +218,25 @@ function dayRow(s, today) {
     const a = state[s.key].actual;
     what += '<label class="actual" for="a-' + s.key + '">Actual miles <input id="a-' + s.key + '" type="number" inputmode="decimal" step="0.01" min="0" value="' + (typeof a === "number" ? a : "") + '" data-actual="' + s.key + '"></label>';
   }
-  const box = s.type === "rest" ? "<span></span>" :
+  const box = s.type === "rest" || s.type === "class" ? "<span></span>" :
     '<button class="check' + (done ? " on" : "") + '" data-toggle="' + s.key + '" aria-pressed="' + done + '" aria-label="Mark ' + esc(s.title) + " on " + DAYNAME[s.day] + " " + (done ? "not done" : "done") + '">' + CHECK + "</button>";
   return '<div class="' + cls + '"><div class="d"><b>' + DAYNAME[s.day] + "</b>" + fmt(s.date) + '</div><div class="what">' + what + "</div>" + box + "</div>";
 }
 
 function renderToday(today) {
   const el = document.getElementById("today");
-  const todays = SESSIONS.filter(s => sameDay(s.date, today));
+  const todays = SESSIONS.filter(s => sameDay(s.date, today)).sort((a, b) => (a.type === "class") - (b.type === "class"));
   let h;
   if (today < START) h = "<h2>Plan starts " + fmt(START) + "</h2>";
   else if (today > RACE) h = '<h2>Race complete</h2><div class="today-item"><div class="t"><div class="title">You did it.</div></div></div>';
   else if (todays.length) {
+    if (todays.every(s => s.type === "class")) h = "<h2>Today · No run</h2>"; else
     h = "<h2>Today · " + DAYNAME[(today.getDay() + 6) % 7] + ", " + fmt(today) + "</h2>";
     todays.forEach(s => {
       const done = isDone(s);
       h += '<div class="today-item"><div class="t"><div class="title">' + (s.mi ? miStr(s.mi) + " mi · " : "") + esc(s.title) + "</div>" +
         (s.desc ? '<div class="desc">' + esc(s.desc) + "</div>" : "") + (fuelFor(s) ? '<span class="fuel-tag">' + esc(fuelFor(s)) + "</span>" : "") + "</div>" +
-        '<button class="btn' + (done ? " done" : "") + '" data-toggle="' + s.key + '">' + (done ? "Done ✓" : "Mark done") + "</button></div>";
+        (s.type === "class" ? '<span class="opt-pill">optional</span>' : '<button class="btn' + (done ? " done" : "") + '" data-toggle="' + s.key + '">' + (done ? "Done ✓" : "Mark done") + "</button>") + "</div>";
     });
   } else h = "<h2>Today · Rest day</h2>";
   const next = SESSIONS.find(s => s.date > today && s.mi > 0);
