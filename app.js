@@ -69,9 +69,29 @@ function milesFor(s) {
 function toggle(key) {
   const s = SESSIONS.find(x => x.key === key);
   const cur = state[key] || {};
-  state[key] = cur.done ? { done: false } : { done: true, actual: s && s.mi ? s.mi : null };
-  saveState(); render();
+  if (cur.done) {
+    // Keep the logged miles so re-checking restores them, and offer an undo
+    state[key] = { done: false, actual: cur.actual };
+    saveState(); render();
+    showUndo("Unmarked " + (s ? DAYNAME[s.day] + " · " + s.title : "session"), () => {
+      state[key] = cur; saveState(); render();
+    });
+  } else {
+    state[key] = { done: true, actual: typeof cur.actual === "number" ? cur.actual : (s && s.mi ? s.mi : null) };
+    saveState(); render();
+  }
 }
+
+let undoTimer = null;
+function showUndo(text, undo) {
+  const t = document.getElementById("toast");
+  t.innerHTML = '<span>' + esc(text) + '</span><button type="button" id="undo-btn">Undo</button>';
+  t.classList.add("show");
+  document.getElementById("undo-btn").onclick = () => { undo(); hideToast(); };
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(hideToast, 6000);
+}
+function hideToast() { document.getElementById("toast").classList.remove("show"); }
 function setActual(key, val) {
   const n = parseFloat(val);
   const cur = state[key] || { done: true };
