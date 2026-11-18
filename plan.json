@@ -20,9 +20,14 @@
  ],
  "paces": [
   [
-   "Easy & long runs",
-   "9:00–9:45",
-   ""
+   "Easy runs",
+   "8:45–9:30",
+   "talk in full sentences"
+  ],
+  [
+   "Long runs",
+   "9:15 → 8:45",
+   "start easy, finish steadier"
   ],
   [
    "Marathon pace (MP)",
@@ -40,7 +45,7 @@
    ""
   ]
  ],
- "paceNote": "These are Denver paces. At sea level in Huntington Beach the same effort runs about 10–15 sec/mi faster, so 8:05–8:15 MP here equals 3:30 pace on race day. Easy runs stay easy no matter how good you feel. Strides are 20-second pickups at a fast, relaxed effort.",
+ "paceNote": "These are Denver paces. At sea level in Huntington Beach the same effort runs about 10–15 sec/mi faster, so 8:05–8:15 MP here equals 3:30 pace on race day. On easy days go by effort, not pace: if you wear a heart rate monitor, stay under about 75% of max. Strides are 20-second pickups at a fast, relaxed effort.",
  "weeks": [
   {
    "ph": "Ease in",
