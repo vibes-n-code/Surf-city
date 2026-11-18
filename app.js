@@ -9,6 +9,7 @@ let PLAN, START, RACE, WEEKS, SESSIONS = [];
 let state = {};
 const openWeeks = new Set();
 let firstRender = true;
+let selWeek = null;
 
 function parseDate(s) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
@@ -133,14 +134,21 @@ function render() {
   let bh = "";
   for (let v = 10; v <= max; v += 10) bh += '<div class="grid-line" style="bottom:' + (v / max * 100) + '%"><span>' + v + "</span></div>";
   let xh = "";
+  let prevMonth = -1;
   WEEKS.forEach((wk, i) => {
     const done = wk.sessions.reduce((a, s) => a + milesFor(s), 0);
     const ph = Math.min(100, wk.plan / max * 100);
     const fh = wk.plan ? Math.min(100, done / wk.plan * 100) : 0;
-    bh += '<div class="bar' + (i === cw ? " now" : "") + (wk.race ? " race" : "") + '" title="Week ' + i + ": " + miStr(done) + " of " + miStr(wk.plan) + ' mi">' +
-      '<div class="plan" style="height:' + ph + '%"><div class="fill" style="height:' + fh + '%"></div></div></div>';
-    xh += '<div class="' + (i === cw ? "now" : "") + '">' + (wk.race ? "R" : i) + "</div>";
+    bh += '<button class="bar' + (i === cw ? " now" : "") + (wk.race ? " race" : "") + (i === selWeek ? " sel" : "") + '" data-jump="' + i + '" aria-label="Week ' + i + ", " + fmt(wk.start) + ": " + miStr(done) + " of " + miStr(wk.plan) + ' miles. Open week.">' +
+      '<div class="plan" style="height:' + ph + '%"><div class="fill" style="height:' + fh + '%"></div></div></button>';
+    const m = wk.start.getMonth();
+    xh += '<div class="' + (i === cw ? "now" : "") + '" data-jump="' + i + '"><span class="mo">' + (m !== prevMonth ? MON[m] : "") + "</span>" + wk.start.getDate() + "</div>";
+    prevMonth = m;
   });
+  const cap = WEEKS[selWeek === null ? cw : selWeek];
+  const capDone = cap.sessions.reduce((a, s) => a + milesFor(s), 0);
+  document.getElementById("chart-cap").innerHTML = "<b>Week " + WEEKS.indexOf(cap) + "</b>" + fmt(cap.start) + " – " + fmt(addDays(cap.start, 6)) +
+    ' · <span class="muted">' + miStr(capDone) + " of " + miStr(cap.plan) + " mi</span>";
   bars.innerHTML = bh; xl.innerHTML = xh;
 
   // Weeks
@@ -209,6 +217,17 @@ function renderToday(today) {
 
 function setStatus(t, warn) { const e = document.getElementById("status"); e.textContent = t; e.className = "status" + (warn ? " warn" : ""); }
 
+function jumpToWeek(i) {
+  selWeek = i;
+  openWeeks.add(i);
+  render();
+  const el = document.querySelector('details.week[data-week="' + i + '"]');
+  if (!el) return;
+  const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
+}
+
 // ---- Backup ----
 function exportBackup() {
   const blob = new Blob([JSON.stringify({ app: "surf-city", exported: new Date().toISOString(), progress: state }, null, 1)], { type: "application/json" });
@@ -239,6 +258,8 @@ document.addEventListener("click", e => {
   if (t) { e.preventDefault(); toggle(t.dataset.toggle); return; }
   const r = e.target.closest("[data-rehab]");
   if (r) { e.preventDefault(); const [wi, i] = r.dataset.rehab.split(":").map(Number); toggleRehab(wi, i); return; }
+  const jmp = e.target.closest("[data-jump]");
+  if (jmp) { jumpToWeek(+jmp.dataset.jump); return; }
   if (e.target.id === "export") exportBackup();
 });
 document.addEventListener("change", e => {

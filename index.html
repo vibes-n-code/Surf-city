@@ -99,8 +99,20 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 .grid-line { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--line); font-size: 10px; color: var(--muted); }
 .grid-line span { position: absolute; right: 0; top: -14px; }
 
+.tap-hint { margin-left: auto; }
+.chart-cap { font-size: 13px; margin: -2px 0 10px; min-height: 19px; }
+.chart-cap b { font-family: var(--display); font-size: 16px; font-weight: 700; margin-right: 4px; }
+button.bar { width: 100%; border: 0; background: transparent; padding: 0; cursor: pointer; font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
+button.bar:focus-visible { outline: 2px solid var(--sea); outline-offset: 2px; border-radius: 4px; }
+.bar.sel .plan { box-shadow: 0 0 0 2px var(--ink); }
+.xlabels > div { line-height: 1.15; cursor: pointer; }
+.xlabels .mo { display: block; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--sea); min-height: 12px; }
+@keyframes flash { from { box-shadow: 0 0 0 3px var(--sea); } to { box-shadow: 0 0 0 0 transparent; } }
+details.week.flash { animation: flash 1.4s ease-out; }
+@media (prefers-reduced-motion: reduce) { details.week.flash { animation: none; } }
+
 /* Weeks */
-details.week { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+details.week { scroll-margin-top: calc(12px + env(safe-area-inset-top)); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 details.week.current { border-color: var(--accent); }
 summary { list-style: none; cursor: pointer; padding: 14px 16px; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; }
 summary::-webkit-details-marker { display: none; }
@@ -235,7 +247,8 @@ details.rt .foot { margin: 0 0 12px; }
 
   <section class="card chart">
     <h2>Weekly mileage</h2>
-    <div class="legend"><span><i style="background:var(--sea-soft)"></i>Planned</span><span><i style="background:var(--sea)"></i>Done</span></div>
+    <div class="legend"><span><i style="background:var(--sea-soft)"></i>Planned</span><span><i style="background:var(--sea)"></i>Done</span><span class="tap-hint">Tap a bar to open that week</span></div>
+    <div class="chart-cap" id="chart-cap"></div>
     <div class="bars" id="bars"></div>
     <div class="xlabels" id="xlabels"></div>
   </section>
