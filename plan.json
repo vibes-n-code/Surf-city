@@ -157,7 +157,7 @@
   },
   {
    "ph": "Build",
-   "note": "Practice fueling on the long run: a gel every ~40 min.",
+   "note": "From here on, Friday runs count. They keep the long run from carrying too much of the week. Fuel on every long run of 13+.",
    "tue": [
     6,
     "Tempo",
@@ -171,13 +171,14 @@
    "fri": [
     4,
     "Easy",
-    "Christmas: skip if needed"
+    "Christmas: move it to Thu or Sun if needed"
    ],
    "sat": [
-    14,
+    13,
     "Long run",
-    "Easy pace, practice fueling"
-   ]
+    "Easy pace. Practice fueling: a gel every 30–40 min."
+   ],
+   "friRequired": true
   },
   {
    "ph": "Build",
@@ -188,7 +189,7 @@
     "6 × 800 m at interval pace, 2 min jog"
    ],
    "thu": [
-    6,
+    7,
     "Marathon pace",
     "4 mi at MP"
    ],
@@ -197,32 +198,34 @@
     "Easy"
    ],
    "sat": [
-    16,
+    15,
     "Long run",
-    "Easy pace"
-   ]
+    "Easy pace, practice fueling"
+   ],
+   "friRequired": true
   },
   {
    "ph": "Build",
-   "note": "First really long run. Slow is fine. Time on your feet is the point.",
+   "note": "Biggest run yet. Slow is fine. How this one feels decides whether Week 9 is 18 or 20.",
    "tue": [
     7,
     "Tempo",
     "25 min continuous at tempo"
    ],
    "thu": [
-    6,
+    7,
     "Easy"
    ],
    "fri": [
-    4,
+    5,
     "Easy"
    ],
    "sat": [
-    18,
+    17,
     "Long run",
-    "Easy, last 3 at MP"
-   ]
+    "Easy, last 3 at MP. Wear your race shoes."
+   ],
+   "friRequired": true
   },
   {
    "ph": "Cutback",
@@ -246,7 +249,8 @@
     12,
     "Long run with MP",
     "6 mi at MP in the middle. Checkpoint run."
-   ]
+   ],
+   "friRequired": true
   },
   {
    "ph": "Peak",
@@ -263,14 +267,15 @@
     "5 mi at MP"
    ],
    "fri": [
-    3,
+    5,
     "Easy"
    ],
    "sat": [
-    20,
+    18,
     "Long run",
-    "Easy pace. Stop at 18 if anything hurts."
-   ]
+    "Easy. Go to 20 only if Week 7's 17 felt good and nothing hurts."
+   ],
+   "friRequired": true
   },
   {
    "ph": "Taper",
@@ -292,7 +297,8 @@
     12,
     "Long run with MP",
     "5 mi at MP"
-   ]
+   ],
+   "friRequired": true
   },
   {
    "ph": "Race week",

@@ -33,7 +33,7 @@ function buildPlan(plan) {
       if (w[day]) {
         const r = w[day];
         const type = day === "mon" || day === "wed" ? "run" : day === "sat" ? "long" : day === "sun" && wi === last ? "race" : "run";
-        s = { type, mi: r[0], title: r[1], desc: r[2] || "", optional: day === "fri" };
+        s = { type, mi: r[0], title: r[1], desc: r[2] || "", optional: day === "fri" && !w.friRequired };
       } else if (day === "mon") s = { type: "class", title: wi === last ? "Workout class (go light)" : "Workout class", mi: 0 };
       else if (day === "wed") s = wi === last ? { type: "rest", title: "Rest", desc: "Skip class this week", mi: 0 } : { type: "class", title: "Workout class", mi: 0 };
       else if (day === "sun") s = { type: "rest", title: "Rest", desc: wi === 0 ? "" : "Or run the long run today if Saturday doesn't work", mi: 0 };
