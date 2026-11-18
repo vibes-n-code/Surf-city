@@ -1,0 +1,319 @@
+{
+ "race": {
+  "name": "Surf City Marathon",
+  "date": "2027-02-07",
+  "start": "6:30 AM",
+  "place": "Huntington Beach"
+ },
+ "planStart": "2026-11-16",
+ "goals": [
+  {
+   "label": "Goal",
+   "time": "3:30",
+   "pace": "8:01/mi"
+  },
+  {
+   "label": "Baseline",
+   "time": "3:40",
+   "pace": "8:24/mi"
+  }
+ ],
+ "paces": [
+  [
+   "Easy & long runs",
+   "9:00–9:45",
+   ""
+  ],
+  [
+   "Marathon pace (MP)",
+   "8:05–8:15",
+   "≈ 8:00 at sea level"
+  ],
+  [
+   "Tempo",
+   "7:25–7:35",
+   ""
+  ],
+  [
+   "Intervals (800s)",
+   "6:55–7:05",
+   ""
+  ]
+ ],
+ "paceNote": "These are Denver paces. At sea level in Huntington Beach the same effort runs about 10–15 sec/mi faster, so 8:05–8:15 MP here equals 3:30 pace on race day. Easy runs stay easy no matter how good you feel. Strides are 20-second pickups at a fast, relaxed effort.",
+ "weeks": [
+  {
+   "ph": "Ease in",
+   "note": "Mileage has been 6–9 a week. This week just gets you moving again.",
+   "tue": [
+    6,
+    "Easy"
+   ],
+   "thu": [
+    3,
+    "Easy"
+   ],
+   "fri": null,
+   "sat": [
+    6,
+    "Long run",
+    "Easy pace"
+   ]
+  },
+  {
+   "ph": "Build",
+   "note": "Thanksgiving Thursday: a turkey trot is fine, just run it easy.",
+   "tue": [
+    4,
+    "Easy + strides",
+    "6 × 20 sec strides at the end"
+   ],
+   "thu": [
+    4,
+    "Easy"
+   ],
+   "fri": [
+    3,
+    "Easy"
+   ],
+   "sat": [
+    8,
+    "Long run",
+    "Easy pace"
+   ]
+  },
+  {
+   "ph": "Build",
+   "note": "",
+   "tue": [
+    5,
+    "Tempo miles",
+    "3 × 1 mi at tempo, 1 min jog between"
+   ],
+   "thu": [
+    5,
+    "Easy"
+   ],
+   "fri": [
+    3,
+    "Easy"
+   ],
+   "sat": [
+    10,
+    "Long run",
+    "Easy pace"
+   ]
+  },
+  {
+   "ph": "Build",
+   "note": "First marathon-pace work. It should feel controlled.",
+   "tue": [
+    6,
+    "Tempo miles",
+    "4 × 1 mi at tempo, 1 min jog between"
+   ],
+   "thu": [
+    5,
+    "Marathon pace",
+    "3 mi at MP in the middle"
+   ],
+   "fri": [
+    3,
+    "Easy"
+   ],
+   "sat": [
+    12,
+    "Long run",
+    "Easy pace"
+   ]
+  },
+  {
+   "ph": "Cutback",
+   "cut": true,
+   "note": "Lighter week so the first block sinks in.",
+   "tue": [
+    4,
+    "Easy + strides",
+    "6 × 20 sec strides"
+   ],
+   "thu": [
+    4,
+    "Easy"
+   ],
+   "fri": [
+    3,
+    "Easy"
+   ],
+   "sat": [
+    9,
+    "Long run",
+    "Easy pace"
+   ]
+  },
+  {
+   "ph": "Build",
+   "note": "Practice fueling on the long run: a gel every ~40 min.",
+   "tue": [
+    6,
+    "Tempo",
+    "20 min continuous at tempo"
+   ],
+   "thu": [
+    6,
+    "Marathon pace",
+    "4 mi at MP"
+   ],
+   "fri": [
+    4,
+    "Easy",
+    "Christmas: skip if needed"
+   ],
+   "sat": [
+    14,
+    "Long run",
+    "Easy pace, practice fueling"
+   ]
+  },
+  {
+   "ph": "Build",
+   "note": "",
+   "tue": [
+    6,
+    "Intervals",
+    "6 × 800 m at interval pace, 2 min jog"
+   ],
+   "thu": [
+    6,
+    "Marathon pace",
+    "4 mi at MP"
+   ],
+   "fri": [
+    4,
+    "Easy"
+   ],
+   "sat": [
+    16,
+    "Long run",
+    "Easy pace"
+   ]
+  },
+  {
+   "ph": "Build",
+   "note": "First really long run. Slow is fine. Time on your feet is the point.",
+   "tue": [
+    7,
+    "Tempo",
+    "25 min continuous at tempo"
+   ],
+   "thu": [
+    6,
+    "Easy"
+   ],
+   "fri": [
+    4,
+    "Easy"
+   ],
+   "sat": [
+    18,
+    "Long run",
+    "Easy, last 3 at MP"
+   ]
+  },
+  {
+   "ph": "Cutback",
+   "cut": true,
+   "checkpoint": "Checkpoint Saturday: if 6 mi at MP after 3 easy miles feels controlled, race for 3:30. If it's a grind, race for the 3:40 baseline.",
+   "note": "",
+   "tue": [
+    5,
+    "Easy + strides",
+    "6 × 20 sec strides"
+   ],
+   "thu": [
+    5,
+    "Easy"
+   ],
+   "fri": [
+    3,
+    "Easy"
+   ],
+   "sat": [
+    12,
+    "Long run with MP",
+    "6 mi at MP in the middle. Checkpoint run."
+   ]
+  },
+  {
+   "ph": "Peak",
+   "peak": true,
+   "note": "Rehearse race morning: breakfast, shoes, kit, fueling.",
+   "tue": [
+    7,
+    "Tempo",
+    "30 min continuous at tempo"
+   ],
+   "thu": [
+    7,
+    "Marathon pace",
+    "5 mi at MP"
+   ],
+   "fri": [
+    3,
+    "Easy"
+   ],
+   "sat": [
+    20,
+    "Long run",
+    "Easy pace. Stop at 18 if anything hurts."
+   ]
+  },
+  {
+   "ph": "Taper",
+   "note": "Mileage drops. Keep classes light on legs.",
+   "tue": [
+    6,
+    "MP miles",
+    "3 × 1 mi at MP"
+   ],
+   "thu": [
+    5,
+    "Easy"
+   ],
+   "fri": [
+    3,
+    "Easy"
+   ],
+   "sat": [
+    12,
+    "Long run with MP",
+    "5 mi at MP"
+   ]
+  },
+  {
+   "ph": "Race week",
+   "race": true,
+   "note": "No classes after Monday. Run 8:05–8:10 for the first 5K, then settle at 8:00. Halfway goal: 1:45.",
+   "tue": [
+    5,
+    "Sharpener",
+    "2 mi at MP in the middle"
+   ],
+   "thu": [
+    3,
+    "Easy + strides",
+    "4 × 20 sec strides"
+   ],
+   "fri": null,
+   "sat": [
+    2,
+    "Shakeout",
+    "Easy jog in Huntington Beach"
+   ],
+   "sun": [
+    26.2,
+    "Race day",
+    "Surf City Marathon, 6:30 AM start"
+   ]
+  }
+ ]
+}

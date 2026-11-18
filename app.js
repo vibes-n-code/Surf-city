@@ -1,0 +1,271 @@
+// Surf City training tracker. The schedule lives in plan.json; progress lives in localStorage.
+const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const DAYNAME = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const LS = "surfcity-progress-v1";
+const LS_PLAN = "surfcity-plan-cache";
+
+let PLAN, START, RACE, WEEKS, SESSIONS = [];
+let state = {};
+const openWeeks = new Set();
+let firstRender = true;
+
+function parseDate(s) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function sameDay(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
+function fmt(d) { return MON[d.getMonth()] + " " + d.getDate(); }
+function esc(t) { return String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function miStr(n) { return (Math.round(n * 10) / 10).toString(); }
+
+function buildPlan(plan) {
+  PLAN = plan;
+  START = parseDate(plan.planStart);
+  RACE = parseDate(plan.race.date);
+  WEEKS = plan.weeks;
+  SESSIONS = [];
+  const last = WEEKS.length - 1;
+  WEEKS.forEach((w, wi) => {
+    w.sessions = DAYS.map((day, di) => {
+      const date = addDays(START, wi * 7 + di);
+      const key = "w" + wi + "-" + day;
+      let s;
+      if (w[day]) {
+        const r = w[day];
+        const type = day === "mon" || day === "wed" ? "run" : day === "sat" ? "long" : day === "sun" && wi === last ? "race" : "run";
+        s = { type, mi: r[0], title: r[1], desc: r[2] || "", optional: day === "fri" };
+      } else if (day === "mon") s = { type: "class", title: wi === last ? "Workout class (go light)" : "Workout class", mi: 0 };
+      else if (day === "wed") s = wi === last ? { type: "rest", title: "Rest", desc: "Skip class this week", mi: 0 } : { type: "class", title: "Workout class", mi: 0 };
+      else if (day === "sun") s = { type: "rest", title: "Rest", desc: wi === 0 ? "" : "Or run the long run today if Saturday doesn't work", mi: 0 };
+      else s = { type: "rest", title: day === "fri" && wi === last ? "Travel / rest" : "Rest", mi: 0 };
+      Object.assign(s, { key, date, day: di, week: wi });
+      if (s.type !== "rest") SESSIONS.push(s);
+      return s;
+    });
+    w.start = addDays(START, wi * 7);
+    w.plan = w.sessions.reduce((a, s) => a + s.mi, 0);
+  });
+}
+
+// ---- Storage ----
+function loadState() {
+  try {
+    const raw = localStorage.getItem(LS);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return { "w0-tue": { done: true, actual: 6.07 } }; // first run, logged before the app existed
+}
+function saveState() {
+  try { localStorage.setItem(LS, JSON.stringify(state)); setStatus("Saved on this phone."); }
+  catch (e) { setStatus("Couldn't save. Your browser may be in private mode.", true); }
+}
+
+function isDone(s) { return !!(state[s.key] && state[s.key].done); }
+function milesFor(s) {
+  const v = state[s.key];
+  if (!v || !v.done) return 0;
+  return typeof v.actual === "number" ? v.actual : s.mi;
+}
+function toggle(key) {
+  const s = SESSIONS.find(x => x.key === key);
+  const cur = state[key] || {};
+  state[key] = cur.done ? { done: false } : { done: true, actual: s && s.mi ? s.mi : null };
+  saveState(); render();
+}
+function setActual(key, val) {
+  const n = parseFloat(val);
+  const cur = state[key] || { done: true };
+  const next = { done: true, actual: isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null };
+  if (cur.done && cur.actual === next.actual) return;
+  state[key] = next; saveState(); render();
+}
+function toggleRehab(wi, i) {
+  const key = "w" + wi + "-rehab";
+  const cur = (state[key] && state[key].count) || 0;
+  state[key] = { count: cur === i + 1 ? i : i + 1 };
+  saveState(); render();
+}
+
+// ---- Render ----
+const CHECK = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>';
+
+function currentWeekIndex(today) {
+  const diff = Math.floor((today - START) / 86400000);
+  return Math.max(0, Math.min(WEEKS.length - 1, Math.floor(diff / 7)));
+}
+
+function renderStatic() {
+  const r = PLAN.race;
+  document.getElementById("race-sub").textContent =
+    DAYNAME[(RACE.getDay() + 6) % 7] + ", " + fmt(RACE) + ", " + RACE.getFullYear() + " · " + r.start + " · " + r.place;
+  document.getElementById("goals").innerHTML = PLAN.goals.map((g, i) =>
+    '<span class="chip' + (i ? " alt" : "") + '">' + esc(g.label + " " + g.time + " · " + g.pace) + "</span>").join("");
+  document.getElementById("pace-rows").innerHTML = PLAN.paces.map(p =>
+    '<div class="pace-row"><span>' + esc(p[0]) + '</span><span class="num">' + esc(p[1]) +
+    (p[2] ? ' <span class="muted" style="font-size:14px">' + esc(p[2]) + "</span>" : "") + "</span></div>").join("");
+  document.getElementById("pace-note").textContent = PLAN.paceNote || "";
+}
+
+function render() {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const cw = currentWeekIndex(today);
+  if (firstRender) openWeeks.add(cw);
+
+  document.getElementById("days").textContent = Math.max(0, Math.round((RACE - today) / 86400000));
+
+  const totalDone = SESSIONS.reduce((a, s) => a + milesFor(s), 0);
+  const runs = SESSIONS.filter(s => s.mi > 0);
+  const runsDone = runs.filter(isDone).length;
+  const w = WEEKS[cw];
+  const weekDone = w.sessions.reduce((a, s) => a + milesFor(s), 0);
+  document.getElementById("s-miles").innerHTML = miStr(totalDone);
+  document.getElementById("s-week").innerHTML = miStr(weekDone) + " <small>/ " + miStr(w.plan) + "</small>";
+  document.getElementById("s-runs").innerHTML = runsDone + " <small>/ " + runs.length + "</small>";
+
+  renderToday(today);
+
+  // Chart
+  const maxPlan = Math.max(...WEEKS.map(x => x.race ? 0 : x.plan));
+  const max = Math.max(40, Math.ceil(maxPlan / 10) * 10);
+  const bars = document.getElementById("bars");
+  const xl = document.getElementById("xlabels");
+  bars.style.gridTemplateColumns = xl.style.gridTemplateColumns = "repeat(" + WEEKS.length + ", 1fr)";
+  let bh = "";
+  for (let v = 10; v <= max; v += 10) bh += '<div class="grid-line" style="bottom:' + (v / max * 100) + '%"><span>' + v + "</span></div>";
+  let xh = "";
+  WEEKS.forEach((wk, i) => {
+    const done = wk.sessions.reduce((a, s) => a + milesFor(s), 0);
+    const ph = Math.min(100, wk.plan / max * 100);
+    const fh = wk.plan ? Math.min(100, done / wk.plan * 100) : 0;
+    bh += '<div class="bar' + (i === cw ? " now" : "") + (wk.race ? " race" : "") + '" title="Week ' + i + ": " + miStr(done) + " of " + miStr(wk.plan) + ' mi">' +
+      '<div class="plan" style="height:' + ph + '%"><div class="fill" style="height:' + fh + '%"></div></div></div>';
+    xh += '<div class="' + (i === cw ? "now" : "") + '">' + (wk.race ? "R" : i) + "</div>";
+  });
+  bars.innerHTML = bh; xl.innerHTML = xh;
+
+  // Weeks
+  let html = "";
+  WEEKS.forEach((wk, wi) => {
+    const done = wk.sessions.reduce((a, s) => a + milesFor(s), 0);
+    const pct = wk.plan ? Math.min(100, done / wk.plan * 100) : 0;
+    const phCls = wk.cut ? "cut" : wk.peak ? "peak" : wk.race ? "race" : "";
+    const end = addDays(wk.start, 6);
+    html += '<details class="week' + (wi === cw ? " current" : "") + '" data-week="' + wi + '"' + (openWeeks.has(wi) ? " open" : "") + ">" +
+      '<summary><div class="wk-title"><h3>Week ' + wi + '</h3><span class="phase ' + phCls + '">' + esc(wk.ph) + "</span></div>" +
+      '<div class="wk-miles"><span class="num">' + miStr(done) + '</span><div class="of">of ' + miStr(wk.plan) + " mi</div></div>" +
+      '<div class="wk-dates">' + fmt(wk.start) + " – " + fmt(end) + (wi === cw ? " · this week" : "") + "</div>" +
+      '<div class="progress"><div style="width:' + pct + '%"></div></div></summary>';
+    if (wk.checkpoint) html += '<div class="wk-note check-note">' + esc(wk.checkpoint) + "</div>";
+    if (wk.note) html += '<div class="wk-note">' + esc(wk.note) + "</div>";
+    html += '<div class="days">';
+    wk.sessions.forEach(s => html += dayRow(s, today));
+    html += "</div>";
+    const rc = (state["w" + wi + "-rehab"] && state["w" + wi + "-rehab"].count) || 0;
+    html += '<div class="rehab"><span class="lbl">Strength routine (3×)</span>';
+    for (let i = 0; i < 3; i++) html += '<button class="dot' + (i < rc ? " on" : "") + '" aria-label="Strength session ' + (i + 1) + (i < rc ? ", done" : "") + '" data-rehab="' + wi + ":" + i + '"></button>';
+    html += "</div></details>";
+  });
+  document.getElementById("weeks").innerHTML = html;
+  firstRender = false;
+}
+
+function dayRow(s, today) {
+  const isToday = sameDay(s.date, today);
+  const done = isDone(s);
+  const cls = "day" + (isToday ? " is-today" : "") + (done ? " done" : "") + (s.type === "rest" ? " rest" : "");
+  let what = '<div class="title">' + (s.mi ? '<span class="mi">' + miStr(s.mi) + "</span>" : "") + esc(s.title) +
+    (s.optional ? '<span class="opt">optional</span>' : "") + "</div>";
+  if (s.desc) what += '<div class="desc">' + esc(s.desc) + "</div>";
+  if (done && s.mi) {
+    const a = state[s.key].actual;
+    what += '<label class="actual" for="a-' + s.key + '">Actual miles <input id="a-' + s.key + '" type="number" inputmode="decimal" step="0.01" min="0" value="' + (typeof a === "number" ? a : "") + '" data-actual="' + s.key + '"></label>';
+  }
+  const box = s.type === "rest" ? "<span></span>" :
+    '<button class="check' + (done ? " on" : "") + '" data-toggle="' + s.key + '" aria-pressed="' + done + '" aria-label="Mark ' + esc(s.title) + " on " + DAYNAME[s.day] + " " + (done ? "not done" : "done") + '">' + CHECK + "</button>";
+  return '<div class="' + cls + '"><div class="d"><b>' + DAYNAME[s.day] + "</b>" + fmt(s.date) + '</div><div class="what">' + what + "</div>" + box + "</div>";
+}
+
+function renderToday(today) {
+  const el = document.getElementById("today");
+  const todays = SESSIONS.filter(s => sameDay(s.date, today));
+  let h;
+  if (today < START) h = "<h2>Plan starts " + fmt(START) + "</h2>";
+  else if (today > RACE) h = '<h2>Race complete</h2><div class="today-item"><div class="t"><div class="title">You did it.</div></div></div>';
+  else if (todays.length) {
+    h = "<h2>Today · " + DAYNAME[(today.getDay() + 6) % 7] + ", " + fmt(today) + "</h2>";
+    todays.forEach(s => {
+      const done = isDone(s);
+      h += '<div class="today-item"><div class="t"><div class="title">' + (s.mi ? miStr(s.mi) + " mi · " : "") + esc(s.title) + "</div>" +
+        (s.desc ? '<div class="desc">' + esc(s.desc) + "</div>" : "") + "</div>" +
+        '<button class="btn' + (done ? " done" : "") + '" data-toggle="' + s.key + '">' + (done ? "Done ✓" : "Mark done") + "</button></div>";
+    });
+  } else h = "<h2>Today · Rest day</h2>";
+  const next = SESSIONS.find(s => s.date > today && s.mi > 0);
+  if (next && today <= RACE) {
+    h += '<div class="today-item"><div class="t"><div class="desc">Next run · ' + DAYNAME[next.day] + ", " + fmt(next.date) + '</div><div class="title" style="font-size:20px">' + miStr(next.mi) + " mi · " + esc(next.title) + "</div>" + (next.desc ? '<div class="desc">' + esc(next.desc) + "</div>" : "") + "</div></div>";
+  }
+  el.innerHTML = h;
+}
+
+function setStatus(t, warn) { const e = document.getElementById("status"); e.textContent = t; e.className = "status" + (warn ? " warn" : ""); }
+
+// ---- Backup ----
+function exportBackup() {
+  const blob = new Blob([JSON.stringify({ app: "surf-city", exported: new Date().toISOString(), progress: state }, null, 1)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "surf-city-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  setStatus("Backup exported.");
+}
+function importBackup(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      const progress = data.progress || data;
+      if (typeof progress !== "object" || Array.isArray(progress)) throw new Error("bad");
+      state = progress; saveState(); render();
+      setStatus("Backup imported.");
+    } catch (e) { setStatus("That file isn't a Surf City backup.", true); }
+  };
+  reader.readAsText(file);
+}
+
+// ---- Events ----
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-toggle]");
+  if (t) { e.preventDefault(); toggle(t.dataset.toggle); return; }
+  const r = e.target.closest("[data-rehab]");
+  if (r) { e.preventDefault(); const [wi, i] = r.dataset.rehab.split(":").map(Number); toggleRehab(wi, i); return; }
+  if (e.target.id === "export") exportBackup();
+});
+document.addEventListener("change", e => {
+  const a = e.target.closest("[data-actual]");
+  if (a) setActual(a.dataset.actual, a.value);
+  if (e.target.id === "import-file" && e.target.files[0]) { importBackup(e.target.files[0]); e.target.value = ""; }
+});
+document.addEventListener("toggle", e => {
+  const d = e.target;
+  if (d.matches && d.matches("details.week")) { const wi = +d.dataset.week; d.open ? openWeeks.add(wi) : openWeeks.delete(wi); }
+}, true);
+// Refresh "today" when the app comes back to the foreground on a new day
+document.addEventListener("visibilitychange", () => { if (!document.hidden && PLAN) render(); });
+
+// ---- Boot ----
+(async function boot() {
+  state = loadState();
+  let plan = null;
+  try {
+    const res = await fetch("plan.json", { cache: "no-cache" });
+    if (res.ok) { plan = await res.json(); try { localStorage.setItem(LS_PLAN, JSON.stringify(plan)); } catch (e) {} }
+  } catch (e) {}
+  if (!plan) { try { plan = JSON.parse(localStorage.getItem(LS_PLAN)); } catch (e) {} }
+  if (!plan) { setStatus("Couldn't load the plan. Connect to the internet and reopen the app.", true); return; }
+  buildPlan(plan);
+  renderStatic();
+  render();
+  setStatus("Saved on this phone.");
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+})();
