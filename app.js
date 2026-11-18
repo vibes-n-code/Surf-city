@@ -70,11 +70,11 @@ function toggle(key) {
   const s = SESSIONS.find(x => x.key === key);
   const cur = state[key] || {};
   if (cur.done) {
-    // Keep the logged miles so re-checking restores them, and offer an undo
-    state[key] = { done: false, actual: cur.actual };
-    saveState(); render();
-    showUndo("Unmarked " + (s ? DAYNAME[s.day] + " · " + s.title : "session"), () => {
-      state[key] = cur; saveState(); render();
+    const label = s ? DAYNAME[s.day] + ", " + fmt(s.date) + " · " + s.title : "this session";
+    const mi = typeof cur.actual === "number" ? miStr(cur.actual) + " mi" : null;
+    confirmUncheck(label, mi, () => {
+      state[key] = { done: false, actual: cur.actual }; // keep miles so re-checking restores them
+      saveState(); render();
     });
   } else {
     state[key] = { done: true, actual: typeof cur.actual === "number" ? cur.actual : (s && s.mi ? s.mi : null) };
@@ -82,16 +82,17 @@ function toggle(key) {
   }
 }
 
-let undoTimer = null;
-function showUndo(text, undo) {
-  const t = document.getElementById("toast");
-  t.innerHTML = '<span>' + esc(text) + '</span><button type="button" id="undo-btn">Undo</button>';
-  t.classList.add("show");
-  document.getElementById("undo-btn").onclick = () => { undo(); hideToast(); };
-  clearTimeout(undoTimer);
-  undoTimer = setTimeout(hideToast, 6000);
+function confirmUncheck(label, mi, onYes) {
+  const m = document.getElementById("confirm");
+  document.getElementById("confirm-text").textContent = label + (mi ? " (" + mi + ")" : "");
+  m.classList.add("show");
+  const yes = document.getElementById("confirm-yes"), no = document.getElementById("confirm-no");
+  const close = () => { m.classList.remove("show"); yes.onclick = no.onclick = m.onclick = null; };
+  yes.onclick = () => { close(); onYes(); };
+  no.onclick = close;
+  m.onclick = e => { if (e.target === m) close(); };
+  no.focus();
 }
-function hideToast() { document.getElementById("toast").classList.remove("show"); }
 function setActual(key, val) {
   const n = parseFloat(val);
   const cur = state[key] || { done: true };

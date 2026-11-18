@@ -111,11 +111,14 @@ button.bar:focus-visible { outline: 2px solid var(--sea); outline-offset: 2px; b
 details.week.flash { animation: flash 1.4s ease-out; }
 @media (prefers-reduced-motion: reduce) { details.week.flash { animation: none; } }
 
-.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translate(-50%, 140%); display: flex; align-items: center; gap: 14px;
-  background: var(--ink); color: var(--bg); border-radius: 12px; padding: 10px 10px 10px 16px; font-size: 14px; box-shadow: 0 6px 24px rgba(0,0,0,.25);
-  max-width: calc(100% - 32px); opacity: 0; pointer-events: none; transition: transform .25s, opacity .25s; z-index: 10; }
-.toast.show { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
-.toast button { font: 600 14px var(--body); background: transparent; color: var(--accent); border: 0; padding: 6px 8px; cursor: pointer; }
+.modal { position: fixed; inset: 0; background: rgba(8, 18, 28, .45); display: flex; align-items: center; justify-content: center; padding: 24px;
+  opacity: 0; pointer-events: none; transition: opacity .18s; z-index: 10; }
+.modal.show { opacity: 1; pointer-events: auto; }
+.sheet { background: var(--surface); border-radius: 16px; padding: 20px; width: 100%; max-width: 340px; box-shadow: 0 10px 40px rgba(0,0,0,.3); }
+.sheet h3 { font-size: 24px; }
+.sheet p { margin: 6px 0 16px; color: var(--muted); font-size: 14px; }
+.sheet-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sheet-btns .btn { padding: 12px; text-align: center; }
 
 /* Weeks */
 details.week { scroll-margin-top: calc(12px + env(safe-area-inset-top)); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
@@ -279,7 +282,13 @@ details.rt .foot { margin: 0 0 12px; }
   <div class="status" id="status">Loading your progress…</div>
 </div>
 
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="modal" id="confirm" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+  <div class="sheet">
+    <h3 id="confirm-title">Uncheck this run?</h3>
+    <p id="confirm-text"></p>
+    <div class="sheet-btns"><button type="button" class="btn ghost" id="confirm-no">Keep it</button><button type="button" class="btn" id="confirm-yes">Uncheck</button></div>
+  </div>
+</div>
 <script src="app.js"></script>
 </body>
 </html>
