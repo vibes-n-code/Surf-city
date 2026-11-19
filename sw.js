@@ -1,5 +1,5 @@
 // Always go to the network for fresh files (skipping the browser's HTTP cache); fall back to the saved copy offline.
-const CACHE = "surf-city-v13";
+const CACHE = "surf-city-v14";
 const FILES = ["./", "index.html", "app.js", "plan.json", "log.json", "manifest.webmanifest", "icons/icon-192.png", "icons/apple-touch-icon.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, { cache: "reload" })))).catch(() => {}));

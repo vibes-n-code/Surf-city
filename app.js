@@ -76,7 +76,8 @@ function toggle(key) {
     const label = s ? DAYNAME[s.day] + ", " + fmt(s.date) + " · " + s.title : "this session";
     const mi = typeof cur.actual === "number" ? miStr(cur.actual) + " mi" : null;
     confirmUncheck(label, mi, () => {
-      state[key] = { done: false, actual: cur.actual, date: cur.date, t: Date.now() }; // keep miles so re-checking restores them
+      state[key] = { done: false, actual: cur.actual, date: cur.date, t: Date.now() };
+      editing.delete(key); // keep miles so re-checking restores them
       saveState(); render();
     });
   } else {
@@ -223,7 +224,7 @@ function render() {
     if (wk.checkpoint) html += '<div class="wk-note check-note">' + esc(wk.checkpoint) + "</div>";
     if (wk.note) html += '<div class="wk-note">' + esc(wk.note) + "</div>";
     html += '<div class="days">';
-    wk.sessions.forEach(s => html += dayRow(s, today));
+    wk.sessions.forEach(s => html += daySlot(s, today));
     html += "</div>";
     const rc = (state["w" + wi + "-rehab"] && state["w" + wi + "-rehab"].count) || 0;
     html += '<div class="rehab"><span class="lbl">Strength routine (3×)</span>';
@@ -234,25 +235,53 @@ function render() {
   firstRender = false;
 }
 
-function dayRow(s, today) {
-  const isToday = sameDay(s.date, today);
+const editing = new Set();
+
+// One row per calendar day: whatever is planned there, plus any run moved onto it
+function daySlot(slot, today) {
+  const date = slot.date;
+  const isToday = sameDay(date, today);
+  const runsHere = SESSIONS.filter(s => s.mi > 0 && sameDay(effDate(s), date));
+  const slotRunMoved = slot.mi > 0 && !sameDay(effDate(slot), date);
+  let body = "";
+  if (slot.type === "class" || slot.type === "rest") body += plainEntry(slot);
+  else if (slotRunMoved && !runsHere.length) body += plainEntry({ type: "rest", title: "Rest" });
+  runsHere.forEach(r => body += runEntry(r, date));
+  if (slot.strength) body += '<span class="str-tag">' + (runsHere.length ? "+ Strength routine after" : "Strength routine · 15 min") + "</span>";
+  const allDone = runsHere.length && runsHere.every(isDone);
+  return '<div class="day' + (isToday ? " is-today" : "") + (allDone ? " done" : "") + '"><div class="d"><b>' + DAYNAME[slot.day] + "</b>" + fmt(date) + '</div><div class="what">' + body + "</div></div>";
+}
+
+function plainEntry(s) {
+  return '<div class="entry ' + s.type + '"><div class="e-main"><div class="title">' + esc(s.title) + "</div>" +
+    (s.desc ? '<div class="desc">' + esc(s.desc) + "</div>" : "") + "</div></div>";
+}
+
+function runEntry(s, shownDate) {
   const done = isDone(s);
-  const cls = "day" + (isToday ? " is-today" : "") + (done ? " done" : "") + (s.type === "rest" ? " rest" : "") + (s.type === "class" ? " class" : "");
-  let what = '<div class="title">' + (s.mi ? '<span class="mi">' + miStr(s.mi) + "</span>" : "") + esc(s.title) +
-    (s.optional ? '<span class="opt">optional</span>' : "") + "</div>";
-  if (s.desc) what += '<div class="desc">' + esc(s.desc) + "</div>";
-  if (fuelFor(s)) what += '<span class="fuel-tag">' + esc(fuelFor(s)) + "</span>";
-  if (s.strength) what += '<span class="str-tag">' + (s.type === "rest" ? "Strength routine · 15 min" : "+ Strength routine after") + "</span>";
-  if (done && s.mi) {
-    const a = state[s.key].actual;
-    const moved = state[s.key].date;
-    if (moved) what += '<div class="moved">Ran on ' + DAYNAME[(parseDate(moved).getDay() + 6) % 7] + ", " + fmt(parseDate(moved)) + "</div>";
-    what += '<div class="actual"><label for="a-' + s.key + '">Miles</label><input id="a-' + s.key + '" type="number" inputmode="decimal" step="0.01" min="0" value="' + (typeof a === "number" ? a : "") + '" data-actual="' + s.key + '">' +
-      '<label for="d-' + s.key + '">Date</label><input id="d-' + s.key + '" class="date-in" type="date" value="' + (moved || iso(s.date)) + '" data-date="' + s.key + '"></div>';
+  const v = state[s.key] || {};
+  let m = '<div class="title">' + '<span class="mi">' + miStr(s.mi) + "</span>" + esc(s.title) + (s.optional ? '<span class="opt">optional</span>' : "") + "</div>";
+  if (!sameDay(s.date, shownDate)) m += '<div class="moved">Moved from ' + DAYNAME[s.day] + "</div>";
+  if (s.desc && !done) m += '<div class="desc">' + esc(s.desc) + "</div>";
+  if (fuelFor(s) && !done) m += '<span class="fuel-tag">' + esc(fuelFor(s)) + "</span>";
+  if (done) {
+    const a = typeof v.actual === "number" ? v.actual : s.mi;
+    if (editing.has(s.key)) {
+      const wkStart = WEEKS[s.week].start;
+      let opts = "";
+      for (let i = 0; i < 7; i++) {
+        const d = addDays(wkStart, i), val = iso(d);
+        opts += '<option value="' + val + '"' + (sameDay(d, effDate(s)) ? " selected" : "") + ">" + DAYNAME[i] + " " + fmt(d) + "</option>";
+      }
+      m += '<div class="edit-row"><label>Miles <input type="number" inputmode="decimal" step="0.01" min="0" value="' + a + '" data-actual="' + s.key + '"></label>' +
+        '<label>Day <select data-date="' + s.key + '">' + opts + "</select></label>" +
+        '<button type="button" class="link" data-edit="' + s.key + '">Done</button></div>';
+    } else {
+      m += '<div class="logged">' + miStr(a) + " mi logged <button type=\"button\" class=\"link\" data-edit=\"" + s.key + '">Edit</button></div>';
+    }
   }
-  const box = s.type === "rest" || s.type === "class" ? "<span></span>" :
-    '<button class="check' + (done ? " on" : "") + '" data-toggle="' + s.key + '" aria-pressed="' + done + '" aria-label="Mark ' + esc(s.title) + " on " + DAYNAME[s.day] + " " + (done ? "not done" : "done") + '">' + CHECK + "</button>";
-  return '<div class="' + cls + '"><div class="d"><b>' + DAYNAME[s.day] + "</b>" + fmt(s.date) + '</div><div class="what">' + what + "</div>" + box + "</div>";
+  const box = '<button class="check' + (done ? " on" : "") + '" data-toggle="' + s.key + '" aria-pressed="' + done + '" aria-label="Mark ' + esc(s.title) + " " + (done ? "not done" : "done") + '">' + CHECK + "</button>";
+  return '<div class="entry run' + (done ? " is-done" : "") + '"><div class="e-main">' + m + "</div>" + box + "</div>";
 }
 
 function renderToday(today) {
@@ -325,6 +354,8 @@ document.addEventListener("click", e => {
   if (t) { e.preventDefault(); toggle(t.dataset.toggle); return; }
   const r = e.target.closest("[data-rehab]");
   if (r) { e.preventDefault(); const [wi, i] = r.dataset.rehab.split(":").map(Number); toggleRehab(wi, i); return; }
+  const ed = e.target.closest("[data-edit]");
+  if (ed) { const k = ed.dataset.edit; editing.has(k) ? editing.delete(k) : editing.add(k); render(); return; }
   const jmp = e.target.closest("[data-jump]");
   if (jmp) { jumpToWeek(+jmp.dataset.jump); return; }
   if (e.target.id === "export") exportBackup();
