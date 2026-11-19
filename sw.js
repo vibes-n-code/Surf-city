@@ -1,5 +1,5 @@
 // Network first so updates show on the next open; cached copy when offline.
-const CACHE = "surf-city-v9";
+const CACHE = "surf-city-v10";
 const FILES = ["./", "index.html", "app.js", "plan.json", "log.json", "manifest.webmanifest", "icons/icon-192.png", "icons/apple-touch-icon.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener("activate", e => {

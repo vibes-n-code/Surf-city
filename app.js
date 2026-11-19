@@ -333,7 +333,28 @@ document.addEventListener("toggle", e => {
   if (d.matches && d.matches("details.week")) { const wi = +d.dataset.week; d.open ? openWeeks.add(wi) : openWeeks.delete(wi); }
 }, true);
 // Refresh "today" when the app comes back to the foreground on a new day
-document.addEventListener("visibilitychange", () => { if (!document.hidden && PLAN) render(); });
+// Each time the app comes back to the foreground, pick up plan changes and runs Claude logged
+let lastSync = Date.now();
+async function syncRemote() {
+  try {
+    const [pr, lr] = await Promise.all([fetch("plan.json", { cache: "no-cache" }), fetch("log.json", { cache: "no-cache" })]);
+    if (pr.ok) {
+      const plan = await pr.json();
+      if (JSON.stringify(plan) !== JSON.stringify(PLAN && PLAN._raw)) {
+        try { localStorage.setItem(LS_PLAN, JSON.stringify(plan)); } catch (e) {}
+        plan._raw = JSON.parse(JSON.stringify(plan));
+        buildPlan(plan); renderStatic();
+      }
+    }
+    if (lr.ok) mergeRemote(await lr.json());
+  } catch (e) {}
+  render();
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden || !PLAN) return;
+  render();
+  if (Date.now() - lastSync > 15000) { lastSync = Date.now(); syncRemote(); }
+});
 
 // No pinch or double-tap zoom (iOS ignores user-scalable=no on its own)
 ["gesturestart", "gesturechange"].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
@@ -349,6 +370,7 @@ document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preven
   } catch (e) {}
   if (!plan) { try { plan = JSON.parse(localStorage.getItem(LS_PLAN)); } catch (e) {} }
   if (!plan) { setStatus("Couldn't load the plan. Connect to the internet and reopen the app.", true); return; }
+  plan._raw = JSON.parse(JSON.stringify(plan));
   buildPlan(plan);
   try {
     const lr = await fetch("log.json", { cache: "no-cache" });
