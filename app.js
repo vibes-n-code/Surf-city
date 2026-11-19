@@ -237,6 +237,19 @@ function render() {
 
 const editing = new Set();
 
+// What to show besides runs: a run moved onto a class day replaces the class; a day freed up by a moved run becomes a class day
+// (unless tomorrow is the long run or race)
+function classRef(slot, runsHere, slotRunMoved) {
+  if (slot.type === "class") return runsHere.length ? null : slot;
+  if (slot.type === "rest") return runsHere.length ? null : slot;
+  if (slotRunMoved && !runsHere.length) {
+    const tomorrow = WEEKS.flatMap(w => w.sessions).find(s => sameDay(s.date, addDays(slot.date, 1)));
+    const beforeLong = tomorrow && (tomorrow.type === "long" || tomorrow.type === "race");
+    return beforeLong ? { type: "rest", title: "Rest" } : { type: "class", title: "Good day for a class", desc: "Freed up by your moved run" };
+  }
+  return null;
+}
+
 // One row per calendar day: whatever is planned there, plus any run moved onto it
 function daySlot(slot, today) {
   const date = slot.date;
@@ -244,8 +257,8 @@ function daySlot(slot, today) {
   const runsHere = SESSIONS.filter(s => s.mi > 0 && sameDay(effDate(s), date));
   const slotRunMoved = slot.mi > 0 && !sameDay(effDate(slot), date);
   let body = "";
-  if (slot.type === "class" || slot.type === "rest") body += plainEntry(slot);
-  else if (slotRunMoved && !runsHere.length) body += plainEntry({ type: "rest", title: "Rest" });
+  const ref = classRef(slot, runsHere, slotRunMoved);
+  if (ref) body += plainEntry(ref);
   runsHere.forEach(r => body += runEntry(r, date));
   if (slot.strength) body += '<span class="str-tag">' + (runsHere.length ? "+ Strength routine after" : "Strength routine · 15 min") + "</span>";
   const allDone = runsHere.length && runsHere.every(isDone);
@@ -286,7 +299,10 @@ function runEntry(s, shownDate) {
 
 function renderToday(today) {
   const el = document.getElementById("today");
-  const todays = SESSIONS.filter(s => s.type === "class" ? sameDay(s.date, today) : sameDay(effDate(s), today)).sort((a, b) => (a.type === "class") - (b.type === "class"));
+  const runsToday = SESSIONS.filter(s => s.mi > 0 && sameDay(effDate(s), today));
+  const slotToday = WEEKS.flatMap(w => w.sessions).find(s => sameDay(s.date, today));
+  const refToday = slotToday ? classRef(slotToday, runsToday, slotToday.mi > 0 && !sameDay(effDate(slotToday), today)) : null;
+  const todays = runsToday.concat(refToday && refToday.type === "class" ? [Object.assign({ key: "class-today" }, refToday)] : []);
   let h;
   if (today < START) h = "<h2>Plan starts " + fmt(START) + "</h2>";
   else if (today > RACE) h = '<h2>Race complete</h2><div class="today-item"><div class="t"><div class="title">You did it.</div></div></div>';
