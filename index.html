@@ -65,6 +65,13 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-sp
 .chip { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: var(--sea-soft); color: var(--sea); font-weight: 600; }
 .chip.alt { background: transparent; border: 1px dashed var(--line); color: var(--muted); }
 
+.goal-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.refresh { display: inline-flex; align-items: center; gap: 5px; font: 500 12px var(--body); color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px 4px 8px; cursor: pointer; }
+.refresh svg { width: 14px; height: 14px; }
+.refresh.spin svg { animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .refresh.spin svg { animation: none; } }
+
 /* Stats */
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
@@ -202,7 +209,7 @@ details.rt .foot { margin: 0 0 12px; }
     </div>
     <div class="count"><div class="big num" id="days">—</div><div class="lbl">days to go</div></div>
   </header>
-  <div class="goals" id="goals"></div>
+  <div class="goal-row"><div class="goals" id="goals"></div><button type="button" class="refresh" id="refresh" aria-label="Refresh"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 10a6.5 6.5 0 1 1-1.9-4.6"/><path d="M16.5 3.5v3.6h-3.6"/></svg><span id="synced">Refresh</span></button></div>
 
   <section class="stats" aria-label="Progress">
     <div class="stat"><div class="v num" id="s-miles">0</div><div class="k">Miles logged</div></div>

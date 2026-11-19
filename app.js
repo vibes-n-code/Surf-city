@@ -347,6 +347,7 @@ async function syncRemote() {
       }
     }
     if (lr.ok) mergeRemote(await lr.json());
+    showSynced();
   } catch (e) {}
   render();
 }
@@ -359,6 +360,23 @@ document.addEventListener("visibilitychange", () => {
 // No pinch or double-tap zoom (iOS ignores user-scalable=no on its own)
 ["gesturestart", "gesturechange"].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
 document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+
+// Refresh button: reload everything (app code, plan, logged runs). Progress stays on the phone.
+document.getElementById("refresh").addEventListener("click", async () => {
+  const btn = document.getElementById("refresh");
+  btn.classList.add("spin");
+  try {
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) await reg.update();
+    }
+  } catch (e) {}
+  location.reload();
+});
+function showSynced() {
+  const d = new Date(), h = d.getHours() % 12 || 12, m = String(d.getMinutes()).padStart(2, "0");
+  document.getElementById("synced").textContent = "Updated " + h + ":" + m + (d.getHours() < 12 ? " AM" : " PM");
+}
 
 // ---- Boot ----
 (async function boot() {
@@ -379,5 +397,6 @@ document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preven
   renderStatic();
   render();
   setStatus("Saved on this phone.");
+  if (navigator.onLine !== false) showSynced();
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 })();
