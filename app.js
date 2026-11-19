@@ -38,6 +38,9 @@ function buildPlan(plan) {
       else if (day === "wed") s = wi === last ? { type: "rest", title: "Rest", desc: "Skip classes this week", mi: 0 } : { type: "class", title: "Good day for a class", desc: wi >= 9 ? "Go easy on legs during peak and taper" : "", mi: 0 };
       else if (day === "sun") s = { type: "rest", title: "Rest", desc: wi === 0 ? "" : "Or run the long run today if Saturday doesn't work", mi: 0 };
       else s = { type: "rest", title: day === "fri" && wi === last ? "Travel / rest" : "Rest", mi: 0 };
+      // Strength after Tue/Thu runs and on Sun; lighter in taper, none race week, never the day before the long run
+      const strengthDays = wi === last ? [] : wi === last - 1 ? ["tue", "thu"] : ["tue", "thu", "sun"];
+      s.strength = strengthDays.includes(day);
       Object.assign(s, { key, date, day: di, week: wi });
       if (s.type !== "rest") SESSIONS.push(s);
       return s;
@@ -239,6 +242,7 @@ function dayRow(s, today) {
     (s.optional ? '<span class="opt">optional</span>' : "") + "</div>";
   if (s.desc) what += '<div class="desc">' + esc(s.desc) + "</div>";
   if (fuelFor(s)) what += '<span class="fuel-tag">' + esc(fuelFor(s)) + "</span>";
+  if (s.strength) what += '<span class="str-tag">' + (s.type === "rest" ? "Strength routine · 15 min" : "+ Strength routine after") + "</span>";
   if (done && s.mi) {
     const a = state[s.key].actual;
     const moved = state[s.key].date;
@@ -267,6 +271,10 @@ function renderToday(today) {
         (s.type === "class" ? '<span class="opt-pill">optional</span>' : '<button class="btn' + (done ? " done" : "") + '" data-toggle="' + s.key + '">' + (done ? "Done ✓" : "Mark done") + "</button>") + "</div>";
     });
   } else h = "<h2>Today · Rest day</h2>";
+  const todaySlot = WEEKS.flatMap(w => w.sessions).find(s => sameDay(s.date, today));
+  if (todaySlot && todaySlot.strength && today <= RACE) {
+    h += '<div class="today-item"><div class="t"><div class="title" style="font-size:20px">Strength routine</div><div class="desc">15 min · heel drops, clamshells, band walks, bridges, side plank, single-leg RDL</div></div><span class="str-tag">today</span></div>';
+  }
   const next = SESSIONS.find(s => s.date > today && s.mi > 0 && !isDone(s));
   if (next && today <= RACE) {
     h += '<div class="today-item"><div class="t"><div class="desc">Next run · ' + DAYNAME[next.day] + ", " + fmt(next.date) + '</div><div class="title" style="font-size:20px">' + miStr(next.mi) + " mi · " + esc(next.title) + "</div>" + (next.desc ? '<div class="desc">' + esc(next.desc) + "</div>" : "") + "</div></div>";
