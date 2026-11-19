@@ -53,7 +53,7 @@ function loadState() {
     const raw = localStorage.getItem(LS);
     if (raw) return JSON.parse(raw);
   } catch (e) {}
-  return { "w0-tue": { done: true, actual: 6.07 } }; // first run, logged before the app existed
+  return { "w0-tue": { done: true, actual: 6.07, t: 0 } }; // first run, logged before the app existed
 }
 function saveState() {
   try { localStorage.setItem(LS, JSON.stringify(state)); setStatus("Saved on this phone."); }
@@ -73,11 +73,11 @@ function toggle(key) {
     const label = s ? DAYNAME[s.day] + ", " + fmt(s.date) + " · " + s.title : "this session";
     const mi = typeof cur.actual === "number" ? miStr(cur.actual) + " mi" : null;
     confirmUncheck(label, mi, () => {
-      state[key] = { done: false, actual: cur.actual }; // keep miles so re-checking restores them
+      state[key] = { done: false, actual: cur.actual, date: cur.date, t: Date.now() }; // keep miles so re-checking restores them
       saveState(); render();
     });
   } else {
-    state[key] = { done: true, actual: typeof cur.actual === "number" ? cur.actual : (s && s.mi ? s.mi : null) };
+    state[key] = { done: true, actual: typeof cur.actual === "number" ? cur.actual : (s && s.mi ? s.mi : null), date: cur.date, t: Date.now() };
     saveState(); render();
   }
 }
@@ -98,12 +98,13 @@ function setActual(key, val) {
   const cur = state[key] || { done: true };
   const next = { done: true, actual: isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null };
   if (cur.done && cur.actual === next.actual) return;
+  next.date = cur.date; next.t = Date.now();
   state[key] = next; saveState(); render();
 }
 function toggleRehab(wi, i) {
   const key = "w" + wi + "-rehab";
   const cur = (state[key] && state[key].count) || 0;
-  state[key] = { count: cur === i + 1 ? i : i + 1 };
+  state[key] = { count: cur === i + 1 ? i : i + 1, t: Date.now() };
   saveState(); render();
 }
 
@@ -113,6 +114,30 @@ function fuelFor(s) {
   if (s.mi < 11) return "Fuel: optional 1 gel";
   const gels = Math.floor((s.mi * 9 - 30) / 30) + 1;
   return "Fuel: " + gels + " gels + water & electrolytes";
+}
+
+function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+// The day a session was actually done, if it was moved off its planned day
+function effDate(s) { const v = state[s.key]; return v && v.done && v.date ? parseDate(v.date) : s.date; }
+function setRunDate(key, val) {
+  const s = SESSIONS.find(x => x.key === key);
+  const cur = state[key];
+  if (!s || !cur || !cur.done || !/^\d{4}-\d{2}-\d{2}$/.test(val)) return;
+  const date = val === iso(s.date) ? undefined : val;
+  if (date === cur.date) return;
+  state[key] = Object.assign({}, cur, { date, t: Date.now() });
+  saveState(); render();
+}
+// Entries Claude logs in log.json; the newer of each entry wins
+function mergeRemote(remote) {
+  let changed = false;
+  for (const k in remote) {
+    const r = remote[k], l = state[k];
+    if (!r || typeof r !== "object") continue;
+    if (!l || (r.t || 0) > (l.t || 0)) { state[k] = r; changed = true; }
+  }
+  if (changed) { try { localStorage.setItem(LS, JSON.stringify(state)); } catch (e) {} }
+  return changed;
 }
 
 // ---- Render ----
@@ -216,7 +241,10 @@ function dayRow(s, today) {
   if (fuelFor(s)) what += '<span class="fuel-tag">' + esc(fuelFor(s)) + "</span>";
   if (done && s.mi) {
     const a = state[s.key].actual;
-    what += '<label class="actual" for="a-' + s.key + '">Actual miles <input id="a-' + s.key + '" type="number" inputmode="decimal" step="0.01" min="0" value="' + (typeof a === "number" ? a : "") + '" data-actual="' + s.key + '"></label>';
+    const moved = state[s.key].date;
+    if (moved) what += '<div class="moved">Ran on ' + DAYNAME[(parseDate(moved).getDay() + 6) % 7] + ", " + fmt(parseDate(moved)) + "</div>";
+    what += '<div class="actual"><label for="a-' + s.key + '">Miles</label><input id="a-' + s.key + '" type="number" inputmode="decimal" step="0.01" min="0" value="' + (typeof a === "number" ? a : "") + '" data-actual="' + s.key + '">' +
+      '<label for="d-' + s.key + '">Date</label><input id="d-' + s.key + '" class="date-in" type="date" value="' + (moved || iso(s.date)) + '" data-date="' + s.key + '"></div>';
   }
   const box = s.type === "rest" || s.type === "class" ? "<span></span>" :
     '<button class="check' + (done ? " on" : "") + '" data-toggle="' + s.key + '" aria-pressed="' + done + '" aria-label="Mark ' + esc(s.title) + " on " + DAYNAME[s.day] + " " + (done ? "not done" : "done") + '">' + CHECK + "</button>";
@@ -225,7 +253,7 @@ function dayRow(s, today) {
 
 function renderToday(today) {
   const el = document.getElementById("today");
-  const todays = SESSIONS.filter(s => sameDay(s.date, today)).sort((a, b) => (a.type === "class") - (b.type === "class"));
+  const todays = SESSIONS.filter(s => s.type === "class" ? sameDay(s.date, today) : sameDay(effDate(s), today)).sort((a, b) => (a.type === "class") - (b.type === "class"));
   let h;
   if (today < START) h = "<h2>Plan starts " + fmt(START) + "</h2>";
   else if (today > RACE) h = '<h2>Race complete</h2><div class="today-item"><div class="t"><div class="title">You did it.</div></div></div>';
@@ -239,7 +267,7 @@ function renderToday(today) {
         (s.type === "class" ? '<span class="opt-pill">optional</span>' : '<button class="btn' + (done ? " done" : "") + '" data-toggle="' + s.key + '">' + (done ? "Done ✓" : "Mark done") + "</button>") + "</div>";
     });
   } else h = "<h2>Today · Rest day</h2>";
-  const next = SESSIONS.find(s => s.date > today && s.mi > 0);
+  const next = SESSIONS.find(s => s.date > today && s.mi > 0 && !isDone(s));
   if (next && today <= RACE) {
     h += '<div class="today-item"><div class="t"><div class="desc">Next run · ' + DAYNAME[next.day] + ", " + fmt(next.date) + '</div><div class="title" style="font-size:20px">' + miStr(next.mi) + " mi · " + esc(next.title) + "</div>" + (next.desc ? '<div class="desc">' + esc(next.desc) + "</div>" : "") + "</div></div>";
   }
@@ -296,6 +324,8 @@ document.addEventListener("click", e => {
 document.addEventListener("change", e => {
   const a = e.target.closest("[data-actual]");
   if (a) setActual(a.dataset.actual, a.value);
+  const dt = e.target.closest("[data-date]");
+  if (dt) setRunDate(dt.dataset.date, dt.value);
   if (e.target.id === "import-file" && e.target.files[0]) { importBackup(e.target.files[0]); e.target.value = ""; }
 });
 document.addEventListener("toggle", e => {
@@ -320,6 +350,10 @@ document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preven
   if (!plan) { try { plan = JSON.parse(localStorage.getItem(LS_PLAN)); } catch (e) {} }
   if (!plan) { setStatus("Couldn't load the plan. Connect to the internet and reopen the app.", true); return; }
   buildPlan(plan);
+  try {
+    const lr = await fetch("log.json", { cache: "no-cache" });
+    if (lr.ok) mergeRemote(await lr.json());
+  } catch (e) {}
   renderStatic();
   render();
   setStatus("Saved on this phone.");
