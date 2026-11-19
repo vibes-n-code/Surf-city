@@ -406,5 +406,10 @@ function showSynced() {
   render();
   setStatus("Saved on this phone.");
   if (navigator.onLine !== false) showSynced();
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  if ("serviceWorker" in navigator) {
+    // When a new version of the app takes over, reload once so it shows right away
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (!reloaded) { reloaded = true; location.reload(); } });
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(r => r.update()).catch(() => {});
+  }
 })();
