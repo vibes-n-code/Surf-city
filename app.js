@@ -122,7 +122,7 @@ function fuelFor(s) {
 
 function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
 // The day a session was actually done, if it was moved off its planned day
-function effDate(s) { const v = state[s.key]; return v && v.done && v.date ? parseDate(v.date) : s.date; }
+function effDate(s) { const v = state[s.key]; return v && v.date ? parseDate(v.date) : s.date; }
 function setRunDate(key, val) {
   const s = SESSIONS.find(x => x.key === key);
   const cur = state[key];
@@ -257,10 +257,11 @@ function daySlot(slot, today) {
   const runsHere = SESSIONS.filter(s => s.mi > 0 && sameDay(effDate(s), date));
   const slotRunMoved = slot.mi > 0 && !sameDay(effDate(slot), date);
   let body = "";
-  const ref = classRef(slot, runsHere, slotRunMoved);
+  const off = state["day-" + iso(date)];
+  const ref = off && off.label ? { type: "rest", title: off.label } : classRef(slot, runsHere, slotRunMoved);
   if (ref) body += plainEntry(ref);
   runsHere.forEach(r => body += runEntry(r, date));
-  if (slot.strength) body += '<span class="str-tag">' + (runsHere.length ? "+ Strength routine after" : "Strength routine · 15 min") + "</span>";
+  if (slot.strength && !(off && off.label)) body += '<span class="str-tag">' + (runsHere.length ? "+ Strength routine after" : "Strength routine · 15 min") + "</span>";
   const allDone = runsHere.length && runsHere.every(isDone);
   return '<div class="day' + (isToday ? " is-today" : "") + (allDone ? " done" : "") + '"><div class="d"><b>' + DAYNAME[slot.day] + "</b>" + fmt(date) + '</div><div class="what">' + body + "</div></div>";
 }
@@ -301,7 +302,8 @@ function renderToday(today) {
   const el = document.getElementById("today");
   const runsToday = SESSIONS.filter(s => s.mi > 0 && sameDay(effDate(s), today));
   const slotToday = WEEKS.flatMap(w => w.sessions).find(s => sameDay(s.date, today));
-  const refToday = slotToday ? classRef(slotToday, runsToday, slotToday.mi > 0 && !sameDay(effDate(slotToday), today)) : null;
+  const offToday = state["day-" + iso(today)];
+  const refToday = offToday && offToday.label ? { type: "rest", title: offToday.label } : slotToday ? classRef(slotToday, runsToday, slotToday.mi > 0 && !sameDay(effDate(slotToday), today)) : null;
   const todays = runsToday.concat(refToday && refToday.type === "class" ? [Object.assign({ key: "class-today" }, refToday)] : []);
   let h;
   if (today < START) h = "<h2>Plan starts " + fmt(START) + "</h2>";
@@ -315,14 +317,14 @@ function renderToday(today) {
         (s.desc ? '<div class="desc">' + esc(s.desc) + "</div>" : "") + (fuelFor(s) ? '<span class="fuel-tag">' + esc(fuelFor(s)) + "</span>" : "") + "</div>" +
         (s.type === "class" ? '<span class="opt-pill">optional</span>' : '<button class="btn' + (done ? " done" : "") + '" data-toggle="' + s.key + '">' + (done ? "Done ✓" : "Mark done") + "</button>") + "</div>";
     });
-  } else h = "<h2>Today · Rest day</h2>";
+  } else h = "<h2>Today · " + (offToday && offToday.label ? esc(offToday.label) : "Rest day") + "</h2>";
   const todaySlot = WEEKS.flatMap(w => w.sessions).find(s => sameDay(s.date, today));
-  if (todaySlot && todaySlot.strength && today <= RACE) {
+  if (todaySlot && todaySlot.strength && today <= RACE && !(offToday && offToday.label)) {
     h += '<div class="today-item"><div class="t"><div class="title" style="font-size:20px">Strength routine</div><div class="desc">15 min · heel drops, clamshells, band walks, bridges, side plank, single-leg RDL</div></div><span class="str-tag">today</span></div>';
   }
-  const next = SESSIONS.find(s => s.date > today && s.mi > 0 && !isDone(s));
+  const next = SESSIONS.filter(s => s.mi > 0 && !isDone(s) && effDate(s) > today).sort((a, b) => effDate(a) - effDate(b))[0];
   if (next && today <= RACE) {
-    h += '<div class="today-item"><div class="t"><div class="desc">Next run · ' + DAYNAME[next.day] + ", " + fmt(next.date) + '</div><div class="title" style="font-size:20px">' + miStr(next.mi) + " mi · " + esc(next.title) + "</div>" + (next.desc ? '<div class="desc">' + esc(next.desc) + "</div>" : "") + "</div></div>";
+    h += '<div class="today-item"><div class="t"><div class="desc">Next run · ' + DAYNAME[(effDate(next).getDay() + 6) % 7] + ", " + fmt(effDate(next)) + '</div><div class="title" style="font-size:20px">' + miStr(next.mi) + " mi · " + esc(next.title) + "</div>" + (next.desc ? '<div class="desc">' + esc(next.desc) + "</div>" : "") + "</div></div>";
   }
   el.innerHTML = h;
 }
