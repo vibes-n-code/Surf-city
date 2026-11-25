@@ -23,5 +23,10 @@
  "day-2026-11-26": {
   "label": "Off \u00b7 Thanksgiving",
   "t": 1795561059018
+ },
+ "w1-tue": {
+  "done": true,
+  "actual": 4.01,
+  "t": 1795564810803
  }
 }
